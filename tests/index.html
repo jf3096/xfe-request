@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <!--<script src="../node_modules/es6-promise/dist/es6-promise.auto.js"></script>-->
+</head>
+<body>
+<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/es5-shim/4.5.7/es5-shim.min.js"></script>-->
+<!--<script src="https://cdnjs.cloudflare.com/ajax/libs/es6-shim/0.34.2/es6-shim.min.js"></script>-->
+<script src="https://code.jquery.com/jquery-1.7.2.js"></script>
+<script>
+    //    console.log(888);
+    //    $.Deferred().resolve(123).then(function () {
+    //        return 456;
+    //    }).then(console.log);
+</script>
+<script src="../dist/XFERequest.js"></script>
+<script>
+    //    https://apps-ws.xoyo.com/passport/get_info?
+    //    new XFERequest.JQueryRequest().get('http://localhost:3000/test1').pipe(function (res) {
+    //        return res.title + 666;
+    //    }).pipe(function (text) {
+    //        console.log(text);
+    //    });
+    var haha = XFERequest.jQueryRequest.jsonp('http://localhost:3000/login-success');
+    haha.then(function (data) {
+        console.log(data);
+    })
+</script>
+</body>
+</html>

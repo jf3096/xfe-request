@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Cow tests</title>
+    <link rel="stylesheet" media="all" href="https://cdn.bootcss.com/mocha/2.5.3/mocha.css">
+</head>
+<body>
+<div id="mocha"><p><a href=".">Index</a></p></div>
+<div id="messages"></div>
+<div id="fixtures"></div>
+<script src="https://cdn.bootcss.com/mocha/2.5.3/mocha.js"></script>
+<script src="https://cdn.bootcss.com/chai/4.1.1/chai.js"></script>
+<script>
+    mocha.setup('bdd');
+</script>
+<script src="https://code.jquery.com/jquery-1.7.2.js"></script>
+<script src="../dist/XFERequest.js"></script>
+<script>
+    window.exports = {};
+</script>
+<script src="./index.spec.js"></script>
+
+<script>
+    var expect = chai.expect;
+
+    describe("Cow", function () {
+        describe("constructor", function () {
+            it("should have a default name", function () {
+                var cow = new Cow();
+                expect(cow.name).to.equal("Anon cow");
+            });
+        });
+
+        describe("#greets", function() {
+            it("should greet passed target", function() {
+                var greetings = (new Cow("Kate")).greets("Baby");
+                expect(greetings).to.equal("Kate greets Baby");
+            });
+        });
+    });
+</script>
+
+<script>mocha.run();</script>
+</body>
+</html>

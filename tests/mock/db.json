@@ -1,0 +1,39 @@
+{
+    "login-success": {
+        "code": 1,
+        "message": "",
+        "data": {
+            "request_id": "2A5BDF18-F11F-9CEB-CE93-348AB9340EE4"
+        }
+    },
+    "login-error": {
+        "code": -20101,
+        "message": "请先登录",
+        "data": {
+            "request_id": "34454339-A521-DDDE-703D-EEC222A352E8"
+        }
+    },
+    "get-user": [
+        {
+            "code": 1,
+            "message": "",
+            "data": {
+                "username": "allen"
+            }
+        },
+        {
+            "code": 2,
+            "message": "",
+            "data": {
+                "username": "coder"
+            }
+        }
+    ],
+    "register": [
+        {
+            "id": 1,
+            "username": "allen",
+            "password": "hello world"
+        }
+    ]
+}
