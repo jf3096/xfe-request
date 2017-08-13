@@ -143,7 +143,7 @@ describe(`jquery-request`, () => {
         return jQueryRequest.head(url).then(/* tslint:disable */function () /* tslint:enable */ {
             const xhr = arguments[2];
             expect(typeof xhr).to.be.equal('object');
-            return arguments;
+            return $.Deferred().resolveWith(this, arguments);
         }).then(/* tslint:disable */function () /* tslint:enable */ {
             const xhr = arguments[2];
             expect(typeof xhr).to.be.equal('object');
@@ -258,38 +258,44 @@ describe(`jquery-request`, () => {
         });
     });
 
+    /**
+     * TODO: 有CACHE的时候 response顺序有问题
+     */
     it(`拦截: head 请求拦截获取get response headers`, (done) => {
         const request = jQueryRequest.create();
-        const url = 'http://localhost:3000/get-current-year';
+        const url = 'http://jx3.xoyo.com/';
         request.register({
             request(requestConfigs: IRequestConfigs): IRequestConfigs {
-                if (localStorage.serverTime) {
+                if (localStorage.currentYear) {
                     const clientCurrentYear = new Date().getFullYear();
                     if (clientCurrentYear !== localStorage.currentYear) {
                         // 由于单元测试的原因， 浏览器环境请使用localStorage.removeItem
                         localStorage.currentYear = null;
+                    } else {
+                        requestConfigs.$$response = localStorage.currentYear;
                     }
-                    requestConfigs.$$response = localStorage.serverTime;
                 }
                 return requestConfigs;
             },
             response(res: any, statusText: string, xhr: JQueryXHR, requestConfigs: IRequestConfigs): void {
-                if (requestConfigs.url === url) {
-                    const lastModify = xhr.getResponseHeader('last-modified');
-                    expect(lastModify).not.to.be.equal(null);
-                    const lastModifyDate = new Date(lastModify);
-                    expect(isNaN(+lastModifyDate)).not.to.be.equal(true);
-                    localStorage.currentYear = lastModifyDate.getFullYear();
+                if (!res && requestConfigs.url === 'http://jx3.xoyo.com/') {
+                    const dateString = xhr.getResponseHeader('date');
+                    expect(dateString).not.to.be.equal(null);
+                    const date = new Date(dateString);
+                    expect(isNaN(+date)).not.to.be.equal(true);
+                    localStorage.currentYear = date.getFullYear();
                     return localStorage.currentYear;
+                } else {
+                    expect(res).to.be.equal(new Date().getFullYear());
                 }
                 return res;
             }
         });
         const firstRequest = () => request.head(url).then((response: ResponseModal) => {
-            expect(response).to.be.equal('');
+            expect(response).to.be.equal(new Date().getFullYear());
         });
         const secondRequest = () => request.head(url).then((response: ResponseModal) => {
-            expect(response).to.be.equal('');
+            expect(response).to.be.equal(new Date().getFullYear());
             done();
         });
         firstRequest().then(secondRequest);
@@ -355,7 +361,7 @@ describe(`jquery-request`, () => {
             });
     });
 
-    it(`mock: 配置mock实现假数据`, () => {
+    it(`mock: 配置 mock 实现假数据`, () => {
         const request = jQueryRequest.create();
         request.mock = {
             'http://localhost:3000/login-success': {
@@ -482,17 +488,28 @@ describe(`jquery-request`, () => {
         });
     });
 
-    it('timeout: 设置5秒超时， 并正确返回超时错误', () => {
-
+    it('timeout: 设置5秒超时， 并正确返回超时错误', (done) => {
+        this.timeout = 10000;
+        jQueryRequest
+            .get('http://localhost:9999', undefined, {options: {timeout: 1000, headers: {foo: 'bar'}}})
+            .then((f: any) => f, (jqXHR: JQueryXHR) => {
+                expect(jqXHR.statusText === 'timeout').to.be.equal(true);
+                done();
+            });
     });
 
-    it('cookie: 使用 with credentials 跨域传递 cookie', () => {
-
-    });
     it('headers：请求携带headers', () => {
-
+        return jQueryRequest
+            .get('http://localhost:3000/login-success', undefined, {options: {headers: {foo: 'bar'}}})
+            .then(function () {
+                expect(this.headers).to.be.eql({foo: 'bar'});
+            });
     });
-    it('cookie: 跨域携带cookie', () => {
-
+    it('cookie: 使用 with credentials 跨域传递 cookie', () => {
+        return jQueryRequest
+            .get('http://localhost:3000/login-success', undefined, {options: {withCredential: true}})
+            .then(/* tslint:disable */function () /* tslint:enable */ {
+                expect(this.withCredential).to.be.equal(true);
+            });
     });
 });

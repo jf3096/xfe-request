@@ -6,7 +6,7 @@
     "scripts": {
         "build": "rimraf dist && webpack",
         "test": "mocha src/**/*.spec.js --compilers js:babel-core/register --require babel-polyfill",
-        "json-server": "json-server tests/mock/db.json -c json-server.json"
+        "json-server": "json-server tests/mock/db.json -c json-server.json --middlewares tests/mock/middleware.js"
     },
     "author": "Ailun She",
     "license": "MIT",

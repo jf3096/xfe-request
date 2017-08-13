@@ -7,6 +7,7 @@ var __assign = (this && this.__assign) || Object.assign || function(t) {
     }
     return t;
 };
+var _this = this;
 exports.__esModule = true;
 var sinon = require("sinon");
 var chai_1 = require("chai");
@@ -133,7 +134,7 @@ describe("jquery-request", function () {
         return index_1["default"].head(url).then(/* tslint:disable */ function () {
             var xhr = arguments[2];
             chai_1.expect(typeof xhr).to.be.equal('object');
-            return arguments;
+            return $.Deferred().resolveWith(this, arguments);
         }).then(/* tslint:disable */ function () {
             var xhr = arguments[2];
             chai_1.expect(typeof xhr).to.be.equal('object');
@@ -234,38 +235,46 @@ describe("jquery-request", function () {
             chai_1.expect(response.code).to.be.equal(100);
         });
     });
+    /**
+     * TODO: 有CACHE的时候 response顺序有问题
+     */
     it("\u62E6\u622A: head \u8BF7\u6C42\u62E6\u622A\u83B7\u53D6get response headers", function (done) {
         var request = index_1["default"].create();
-        var url = 'http://localhost:3000/get-current-year';
+        var url = 'http://jx3.xoyo.com/';
         request.register({
             request: function (requestConfigs) {
-                if (localStorage.serverTime) {
+                if (localStorage.currentYear) {
                     var clientCurrentYear = new Date().getFullYear();
                     if (clientCurrentYear !== localStorage.currentYear) {
                         // 由于单元测试的原因， 浏览器环境请使用localStorage.removeItem
                         localStorage.currentYear = null;
                     }
-                    requestConfigs.$$response = localStorage.serverTime;
+                    else {
+                        requestConfigs.$$response = localStorage.currentYear;
+                    }
                 }
                 return requestConfigs;
             },
             response: function (res, statusText, xhr, requestConfigs) {
-                if (requestConfigs.url === url) {
-                    var lastModify = xhr.getResponseHeader('last-modified');
-                    chai_1.expect(lastModify).not.to.be.equal(null);
-                    var lastModifyDate = new Date(lastModify);
-                    chai_1.expect(isNaN(+lastModifyDate)).not.to.be.equal(true);
-                    localStorage.currentYear = lastModifyDate.getFullYear();
+                if (!res && requestConfigs.url === 'http://jx3.xoyo.com/') {
+                    var dateString = xhr.getResponseHeader('date');
+                    chai_1.expect(dateString).not.to.be.equal(null);
+                    var date = new Date(dateString);
+                    chai_1.expect(isNaN(+date)).not.to.be.equal(true);
+                    localStorage.currentYear = date.getFullYear();
                     return localStorage.currentYear;
+                }
+                else {
+                    chai_1.expect(res).to.be.equal(new Date().getFullYear());
                 }
                 return res;
             }
         });
         var firstRequest = function () { return request.head(url).then(function (response) {
-            chai_1.expect(response).to.be.equal('');
+            chai_1.expect(response).to.be.equal(new Date().getFullYear());
         }); };
         var secondRequest = function () { return request.head(url).then(function (response) {
-            chai_1.expect(response).to.be.equal('');
+            chai_1.expect(response).to.be.equal(new Date().getFullYear());
             done();
         }); };
         firstRequest().then(secondRequest);
@@ -326,7 +335,7 @@ describe("jquery-request", function () {
             chai_1.expect(data).to.be.equal(undefined);
         });
     });
-    it("mock: \u914D\u7F6Emock\u5B9E\u73B0\u5047\u6570\u636E", function () {
+    it("mock: \u914D\u7F6E mock \u5B9E\u73B0\u5047\u6570\u636E", function () {
         var request = index_1["default"].create();
         request.mock = {
             'http://localhost:3000/login-success': {
@@ -436,13 +445,28 @@ describe("jquery-request", function () {
             chai_1.expect(data).to.be.equal('reject again');
         });
     });
-    it('timeout: 设置5秒超时， 并正确返回超时错误', function () {
-    });
-    it('cookie: 使用 with credentials 跨域传递 cookie', function () {
+    it('timeout: 设置5秒超时， 并正确返回超时错误', function (done) {
+        _this.timeout = 10000;
+        index_1["default"]
+            .get('http://localhost:9999', undefined, { options: { timeout: 1000, headers: { foo: 'bar' } } })
+            .then(function (f) { return f; }, function (jqXHR) {
+            chai_1.expect(jqXHR.statusText === 'timeout').to.be.equal(true);
+            done();
+        });
     });
     it('headers：请求携带headers', function () {
+        return index_1["default"]
+            .get('http://localhost:3000/login-success', undefined, { options: { headers: { foo: 'bar' } } })
+            .then(function () {
+            chai_1.expect(this.headers).to.be.eql({ foo: 'bar' });
+        });
     });
-    it('cookie: 跨域携带cookie', function () {
+    it('cookie: 使用 with credentials 跨域传递 cookie', function () {
+        return index_1["default"]
+            .get('http://localhost:3000/login-success', undefined, { options: { withCredential: true } })
+            .then(/* tslint:disable */ function () {
+            chai_1.expect(this.withCredential).to.be.equal(true);
+        });
     });
 });
 //# sourceMappingURL=index.spec.js.map

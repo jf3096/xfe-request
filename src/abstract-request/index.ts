@@ -50,10 +50,10 @@ export interface IInterceptor {
 }
 
 export interface IRequestOptions {
-    [key: string]: string;
+    [key: string]: any;
 
     dataType?: 'jsonp' | string;
-    method: MethodType;
+    method?: MethodType;
 }
 
 export type RequestType = (requestConfigs: IRequestConfigs) => IRequestConfigs;

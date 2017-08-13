@@ -1,4 +1,4 @@
-# xfe-request (Refining)
+# xfe-request
 > 前端请求抽象模块，基于angular请求拦截原理定制实现。
 
 ## 说明
@@ -21,7 +21,7 @@
 ## 实用功能
 
 1. 提供拦截，允许在环节中装饰数据
-2. 兼容 IE6+
+2. 支持 CommonJS, AMD, NO Module（ IE6+）
 3. 支持注入缓存或 mock 数据。
 
 ## 使用 xfe-request
@@ -246,6 +246,8 @@ Promise 的 then 无法将变更的值一直传递下去。
 ```
 
 ## Mock Data
+
+### 基本使用
 在开发过程中，Mock 数据是必不可少的。其中一个常见的方案是使用 Mock Server，接着我们把测试数据编写到 Mock Server 中。
 在这个过程中我们需要：
 
@@ -301,6 +303,7 @@ Promise 的 then 无法将变更的值一直传递下去。
             jQueryRequest.post('http://localhost:3000/login-success'),
             jQueryRequest.post('/get-name')
         ).then(([resFromGet], resFromPost, resFromGetName) => {
+            // 服务端返回的数据
             expect(resFromGet).to.be.eql({
                 code: 1,
                 message: '',
@@ -308,24 +311,180 @@ Promise 的 then 无法将变更的值一直传递下去。
                     request_id: '2A5BDF18-F11F-9CEB-CE93-348AB9340EE4'
                 }
             });
+            // mock 数据
             expect(resFromPost).to.be.eql({
                 data: 666
             });
+            // mock 数据
             expect(resFromGetName).to.be.equal('allen');
         });
     });
 ```
 
-函数参数 requestConfigs 为请求配置，
+函数参数 requestConfigs 为请求配置，开发者可以根据请求配置做定制化的拦截。
+上述例子我们可以仅仅只拦截post请求并替换成 mock data，其他情况可以不返回或者返回 undefined，undefined 表示不拦截。
+
+### 全局拦截 mock 数据
+以下方法拦截所有的 get 请求。
+```javascript
+    it('mock: 配置mock实现假数据， 使用 * 可以匹配一切 url', () => {
+        const request = jQueryRequest.create();
+        request.mock = {
+            '*': (requestConfigs: IRequestConfigs) => {
+                if (requestConfigs.options.method === 'get') {
+                    return {
+                        data: 666
+                    };
+                }
+            }
+        };
+        return request.get('http://localhost:3000/login-success').then((res) => {
+            expect(res.data).to.be.equal(666);
+        });
+    });
+```
+
+### Regex 正则匹配
+
+根据 * 的形式，衍生 Regex 匹配替换。提供 jQueryRequest.mockRegexMatcher 匹配正则。
+
+```javascript
+    it('mock: 配置mock实现假数据， 使用 * 的方式自定义正则匹配规则', () => {
+        jQueryRequest.mock = {
+            '*': jQueryRequest.mockRegexMatcher(/.*\/login-.*$/, {data: 666})
+        };
+        return $.when(
+            jQueryRequest.get('http://localhost:3000/login-success'),
+            jQueryRequest.get('http://localhost:3000/login-error'),
+            jQueryRequest.get('http://localhost:3000/register'),
+        ).then((resFromSuccess, resFromError, [resFromRegister]) => {
+            expect(resFromSuccess.data).to.be.equal(666);
+            expect(resFromError.data).to.be.equal(666);
+            expect(resFromRegister).to.be.eql([
+                {
+                    id: 1,
+                    username: 'allen',
+                    password: 'hello world'
+                }
+            ]);
+        });
+    });
+```
+上述方法匹配 ‘login-’ 并返回 {data: 666}
 
 ## 拦截器
 
-拦截器是当前API库的核心，理解它能很大程度封装自己的代码，简化代码逻辑，并且能够使用无侵入
-的方式优化代码。
+拦截器是当前API库的核心，理解它能很大程度封装自己的代码，简化代码逻辑，并且能够使用无侵入的方式优化代码。
 
-场景1：剑网3的footer每次都需要获取服务器时间的年份，并添加到 copy right。
-分析：年份周期非常长，一年变更一次，那么我们可以使用localStorage等方式存储起来。
+场景：剑网3的footer每次都需要获取服务器时间的年份，并添加到 copy right。
+分析：年份周期非常长，一年变更一次，那么我们可以使用 localStorage 等方式存储起来 （仅仅只是DEMO，如果一定要实时稳定请走服务器）。
+
+```javascript
+    const Response = {
+        Success: 1
+    };
+    /**
+     * footer 缓存
+     */
+    jqueryRequest.register({
+        request(requestConfigs) {
+            const currentYear = localStorage.getItem('currentYear');
+            if (currentYear) {
+                const clientCurrentYear = new Date().getFullYear();
+                if (clientCurrentYear !== currentYear) {
+                    localStorage.removeItem('currentYear');
+                } else {
+                    requestConfigs.$$response = currentYear;
+                }
+            }
+            return requestConfigs;
+        },
+        response(res, statusText, xhr, requestConfigs) {
+            if (!res && requestConfigs.url === 'http://jx3.xoyo.com/') {
+                const dateString = xhr.getResponseHeader('date');
+                const date = new Date(dateString);
+                if(!isNaN(+date)) {
+                    localStorage.setItem('currentYear', date.getFullYear());
+                    return localStorage.currentYear;
+                }
+            }
+            return res;
+        }
+    })
+```
+
+## 兼容JQuery
+
+jQueryRequest.get(<url>, <data>, <requestConfigs>), JQuery Ajax 的参数对应requestConfigs中options，例如：
+
+```javascript
+    $.ajax({
+        url: '/',
+        withCredentials: true,
+        async: true
+    })
+    
+    // 等效于
+    
+    jquertRequest.get('/', undefined, {options: { withCredentials: true, async: true }})
+```
+
+## API
+#### requestConfigs
+```javascript
+    [key: string]: any;
+
+    /**
+     * 如果在配置参数中存在$$response
+     * 则直接拦截当前请求
+     */
+    $$response?: any;
+    /**
+     * 用于标识每一个请求
+     */
+    uid?: number;
+    /**
+     * 最终提交的请求url
+     */
+    url?: string;
+    /**
+     * 提交数据data
+     */
+    data?: object;
+    /**
+     * TODO: 测试这里
+     * 请求的相对路径，用于和apiRoot拼接，但如果配置中存在url，则优先url
+     * 例如：（无需关系前置是否有/左斜杠，这里已经处理有斜杠的情况）
+     * apiName：user/get-name 或 /user/get-name
+     * apiRoot：http://localhost 或 http://localhost/
+     * 最终请求url为：
+     * http://localhost/user/get-name
+     */
+    apiName?: string;
+    /**
+     * 请求的根路径，用于和apiName拼接，但如果配置中存在url，则优先url
+     * 例如：（无需关系前置是否有/左斜杠，这里已经处理有斜杠的情况）
+     * apiName：user/get-name 或 /user/get-name
+     * apiRoot：http://localhost 或 http://localhost/
+     * 最终请求url为：
+     * http://localhost/user/get-name
+     */
+    apiRoot?: string;
+    options?: IRequestOptions;
+```
+
+## FAQ
+1. 为什么 resolve 和 reject 中的参数 jqXHR 顺序这么怪异？
+由于这个实现部分基于 JQuery 1.7.2，为了让开发者有文档可查询，所以很多设计依旧兼容原版本的设计，
+但并不会因此与原生 Promise API 偏移过大。 在原版本 7538 ~ 7542 行中，返回 Promise 参数如下：
+```javascript
+    if ( isSuccess ) {
+        deferred.resolveWith( callbackContext, [ success, statusText, jqXHR ] );
+    } else {
+        deferred.rejectWith( callbackContext, [ jqXHR, statusText, error ] );
+    }
+```
 
 ## License
 
-MIT © Ailun She，Li Canming
+MIT © Ailun She
