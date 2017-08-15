@@ -14,7 +14,7 @@
 
 ## 注意
 
-由于西山居 PC 端主要使用 JQuery 1.7.2 进行日常开发， 所以jquery-request仅仅
+由于公司 PC 端主要使用 JQuery 1.7.2 进行日常开发， 所以jquery-request仅仅
 只面向 JQuery 1.7.2 做单元测试 （暂只针对1.7.2的主要原因在于JQuery 1.5到1.8 做了多次Promise API变更
 在promise的实现不符合ES6 Promise标准）。若后续需要版本升级，只需在版本升级后执行单元测试用例即可完成升级。
 
